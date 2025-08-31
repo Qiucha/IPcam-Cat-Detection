@@ -149,7 +149,7 @@ if __name__ == "__main__":
   model = YOLO(os.getenv('MODEL'))
 
   # notification/process suspend after activation (in seconds)
-  suspend = os.getenv('SUSPEND')
+  suspend = int(os.getenv('SUSPEND'))
 
   # Set environment for rtsp_transport
   os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;0"
