@@ -153,6 +153,19 @@ Or even better, use/modify this project as blueprint to suit your own needs!
 - [YOLO opencv eliminating artifacts in rtsp frame decoding - medium](https://blog.gopenai.com/yolo-opencv-eliminating-artifacts-in-rtsp-frame-decoding-88a9dbf47754)
 
 
+## Note on Performance
+Using pretrained model 'yolov8n.pt' from [ultralytic](https://docs.ultralytics.com/models/yolov8/#supported-tasks-and-modes).
+
+Tested with mac mini M4 (16G RAM), macbook air M1 (8G RAM) and a raspberry pi 4B (8G model).
+
+For a mostly idle mac mini M4 (16G RAM), the inference time is around **22** ms avg.
+
+For a base macbook air M1 (8G RAM), the inference time is around **50** ms avg. Note that this machine is almost always busy running other processes.
+
+For raspberry pi 4B (8G RAM) model, the inference time is around **850** ms. Note that this machine is also running other processes, tho not as demanding as M1 macbook air.
+
+User could, and probably should set threshold and step according to the ability of your own device.
+
 
 ## Story behind the project
 There's a cat near my parents place that my parents liked that little kitty and wanted to feed her anytime she comes by. However, she does not make any sound and this makes them hard to notice. So an idea of cat detection camera comes to our mind.
