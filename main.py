@@ -176,7 +176,7 @@ if __name__ == "__main__":
         
         if msg_dict is not None:
           activation += step
-        else:
+        elfi activation >= 0:
           activation -= (step/10)
 
         if activation >= threshold:
