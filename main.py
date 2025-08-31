@@ -99,7 +99,7 @@ def _chk_crt_path(path):
   if not os.path.exists(path):
     os.mkdir(path)
   elif not os.path.isdir(path):
-    raise ValueError("path given in .env exists and is not a directory.")
+    raise ValueError("path given exists and is not a directory.")
 
 
 class RTSPStream:

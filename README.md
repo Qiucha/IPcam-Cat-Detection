@@ -117,8 +117,9 @@ tailscale serve status --json >> /config/serve.json
 ``` 
 
 ### Step.4 Install Ntfy App on your phone
-Android: [ntfy on Google Playstore](https://play.google.com/store/apps/details?id=io.heckel.ntfy&hl=en)
-iOS: [ntfy on App Store](https://apps.apple.com/us/app/ntfy/id1625396347)
+- Android: [ntfy on Google Playstore](https://play.google.com/store/apps/details?id=io.heckel.ntfy&hl=en)
+
+- iOS: [ntfy on App Store](https://apps.apple.com/us/app/ntfy/id1625396347)
 
 For iOS, note that some functionality limitations are identified by the auther of ntfy, which is still in progress. Check the guide in [offical known issues](https://docs.ntfy.sh/known-issues/). The PWA workaround didn't work well for me personally though.
 
