@@ -27,6 +27,13 @@ conda activate ipcd; pip install -r requirement.txt
 Note that this would install all the packages with specific version, if indicated, in the [requirement.txt](requirement.txt).
 
 ### Step.2 Create `.env` files in home directory of this project and `ntfy-docker` respectively.
+#### (Optional/Recommended) Use [`utils/__env_gen__.py`](utils/__env_gen__.py) for formatting
+head to the home directory of the project in terminal and execute the following command:
+```shell
+python utils/__env_gen__.py
+```
+And don't forget to fill in the information! This script is just for formatting and project path filling!
+
 #### Format of `.env`
 ```env
 # webcam related information
@@ -128,6 +135,15 @@ Remember to setup your server url and user credits according to the settings abo
 
 ### Final Step. Have fun with your cat!
 Play with a test cat picture with [pilot.ipynb](pilot.ipynb) or deploy the [main.py](main.py) directly!
+
+To use [pilot.ipynb](pilot.ipynb), check out a IDE that supports jupyter notebook for better experience; To use [main.py](main.py) directly and depoly the program, head to the home directory of this project and use the following terminal command below.
+
+```shell
+conda activate ipcd
+python main.py
+```
+
+To end the loop, use keyboard interruption, usually by focusing on the terminal and press `Ctrl + C`.
 
 Or even better, use/modify this project as blueprint to suit your own needs!
 
