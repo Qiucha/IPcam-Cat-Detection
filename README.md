@@ -104,7 +104,8 @@ visitor-attachment-daily-bandwidth-limit: "500M"
 upstream-base-utl: "https://ntfy.sh"
 ```
 
-> [!NOTE] Note that the `base-url` value should be set to your own tailnet name, `https://ntfy.tail-scale.ts.net` for example, if using tailscale.
+> [!NOTE] 
+> Note that the `base-url` value should be set to your own tailnet name, `https://ntfy.tail-scale.ts.net` for example, if using tailscale.
 
 
 
