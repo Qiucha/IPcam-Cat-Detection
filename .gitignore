@@ -205,3 +205,12 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+
+# self defined files to ignore
+test_img/*
+saved_img/*
+*/.env
+*.pt
+ntfy-docker/ts/*
+ntfy-docker/ntfy/*
