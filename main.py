@@ -181,7 +181,14 @@ if __name__ == "__main__":
 
         if activation >= threshold:
           cv2.imwrite(filename, frame)
-          _push_ntfy(host, topic, msg_dict, filename)
+          _push_ntfy(
+            host = host, 
+            topic = topic,
+            msg_dict = msg_dict,
+            ntfy_user = ntfy_user,
+            ntfy_pass = ntfy_pass,
+            img_path = filename)
+          
 
           time.sleep(suspend)
           activation = 0
