@@ -5,7 +5,7 @@ A small side project to use old IPcam/Android phone as cat detection camera, com
 
 - A computer or IoT device that is capable of handling the object detection model efficiently.
 
-- (Optional) Docker installed on the device mentioned above, with the compose plugin. This is for self-host [ntfy](https://ntfy.sh). Other options should also be considered as well. For more detail, check out [Known Issue](#known-issues) section of this article.
+- (Optional) Docker with compose plugin installed on the device mentioned above or any other device that is capable of handling docker. This is for self-host [ntfy](https://ntfy.sh). Other options should also be considered as well. For more detail, check out [Known Issue](#known-issues) section of this article.
 
 - A functioning IP camera, or a functioning Android phone with IP camera app such as [IP webcam](https://play.google.com/store/apps/details?id=com.pas.webcam&hl=en) installed. I didn't research for iOS devices, but there should be some compatible options.
 
@@ -144,7 +144,7 @@ Remember to setup your server url and user credits according to the settings abo
 ### Final Step. Have fun with your cat!
 Play with a test cat picture with [pilot.ipynb](pilot.ipynb) or deploy the [main.py](main.py) directly!
 
-To use [pilot.ipynb](pilot.ipynb), check out a IDE that supports jupyter notebook for better experience; To use [main.py](main.py) directly and depoly the program, head to the home directory of this project and use the following terminal command below.
+To use [pilot.ipynb](pilot.ipynb), check out a IDE that supports jupyter notebook for better experience; To use [main.py](main.py) directly and depoly the program, head to the home directory of this project and use the terminal command shown below; Or even better, use/modify this project as blueprint to suit your own needs!
 
 ```shell
 conda activate ipcd
@@ -153,8 +153,6 @@ python main.py
 
 To end the loop, use keyboard interruption, usually by focusing on the terminal and press `Ctrl + C`.
 
-Or even better, use/modify this project as blueprint to suit your own needs!
-
 
 ## References
 - [RTSP Streams to cv2](https://sandervandevelde.wordpress.com/2024/10/12/recording-rtsp-video-feeds-using-python-and-opencv/)
@@ -162,31 +160,30 @@ Or even better, use/modify this project as blueprint to suit your own needs!
 
 
 ## Note on Performance
-Using pretrained model 'yolov8n.pt' from [ultralytic](https://docs.ultralytics.com/models/yolov8/#supported-tasks-and-modes).
+Using pretrained model 'yolov8n.pt' from [ultralytic](https://docs.ultralytics.com/models/yolov8/#supported-tasks-and-modes). Tested with mac mini M4 (16G RAM), macbook air M1 (8G RAM) and a raspberry pi 4B (8G model).
 
 ### CPU Inference
-Tested with mac mini M4 (16G RAM), macbook air M1 (8G RAM) and a raspberry pi 4B (8G model).
-
 For a mostly idle mac mini M4 (16G RAM), the inference time is around **22** ms avg.
 
 For a base macbook air M1 (8G RAM), the inference time is around **50** ms avg. Note that this machine is almost always busy running other processes.
 
 For raspberry pi 4B (8G RAM) model, the inference time is around **850** ms. Note that this machine is also running other processes, tho not as demanding as M1 macbook air.
 
-User could, and probably should set threshold and step according to the ability of your own device.
 
 ### GPU/MPS Inference
-For a mostly idle mac mini M4 (16G RAM), the inference time is around **5.5** ms avg.
+For a mostly idle mac mini M4 (16G RAM), the inference time is around **6** ms avg.
 
 For a base macbook air M1 (8G RAM), the inference time is around **10** ms avg.
 
 
+User could, and probably should set threshold and step in [`main.py`](main.py) according to the ability, inference time, of your own device.
+
 ## Story behind the project
-There's a cat near my parents place that my parents liked that little kitty and wanted to feed her anytime she comes by. However, she does not make any sound and this makes them hard to notice. So an idea of cat detection camera comes to our mind.
+There's a cat near my parents place that my parents liked that little kitty and wanted to feed her anytime she comes by. However, she does not make any sound and that makes them hard to notice. So an idea of cat detection camera comes to our mind.
 
 There're some existing projects which mostly use raspberry pi and raspberry pi camera to achieve this functionality, but there's a spare old IP camera in their place and they don't want to spend much when there's alternative. That's why I'm doing this project to utilize the old IP camera and the mac mini that they're barely using, but still needed for work.
 
 
 ## Known Issues
 ### iOS Ntfy compatibility issue
-This is known issue to me before starting this project. Not a deal break for me personally, but definitely a point to consider. For a comprehensive read, checkout [Ntfy — Self-hosted push notification server for all your services](https://akashrajpurohit.com/blog/selfhost-ntfy-for-push-notifications/).
+This is known issue to me before starting this project. Not a deal breaker for me personally, but definitely a point to consider. For a comprehensive read, checkout [Ntfy — Self-hosted push notification server for all your services](https://akashrajpurohit.com/blog/selfhost-ntfy-for-push-notifications/).
