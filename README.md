@@ -164,6 +164,7 @@ Or even better, use/modify this project as blueprint to suit your own needs!
 ## Note on Performance
 Using pretrained model 'yolov8n.pt' from [ultralytic](https://docs.ultralytics.com/models/yolov8/#supported-tasks-and-modes).
 
+### CPU Inference
 Tested with mac mini M4 (16G RAM), macbook air M1 (8G RAM) and a raspberry pi 4B (8G model).
 
 For a mostly idle mac mini M4 (16G RAM), the inference time is around **22** ms avg.
@@ -173,6 +174,11 @@ For a base macbook air M1 (8G RAM), the inference time is around **50** ms avg. 
 For raspberry pi 4B (8G RAM) model, the inference time is around **850** ms. Note that this machine is also running other processes, tho not as demanding as M1 macbook air.
 
 User could, and probably should set threshold and step according to the ability of your own device.
+
+### GPU/MPS Inference
+For a mostly idle mac mini M4 (16G RAM), the inference time is around **5.5** ms avg.
+
+For a base macbook air M1 (8G RAM), the inference time is around **10** ms avg.
 
 
 ## Story behind the project

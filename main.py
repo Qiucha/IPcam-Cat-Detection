@@ -6,6 +6,7 @@ import numpy as np
 from requests.auth import HTTPBasicAuth
 
 from ultralytics import YOLO
+import torch
 
 import threading
 
@@ -37,8 +38,19 @@ def _get_img_from_ipcam_stream(
   return img
 
 
-def _extract_model_prediction(model, img) -> dict:
-  result = model(img)[0]
+def _setup_torch_device():
+  # Priority of torch.device: cuda > mps > cpu
+  if torch.cuda.is_available():
+    torch_device = torch.device("cuda")
+  elif torch.backends.mps.is_available():
+    torch_device = torch.device("mps")
+  else:
+    torch_device = torch.device("cpu")
+  return torch_device
+
+
+def _extract_model_prediction(model, img, device) -> dict:
+  result = model(img, device=device)[0]
   max_conf = 0
 
   for conf, cs in zip(result.boxes.conf, result.boxes.cls):
@@ -165,14 +177,15 @@ if __name__ == "__main__":
   step = 20
   if suspend == "" or suspend is None:
     suspend = 600 # in seconds
-
+  device = _setup_torch_device()
+  
   while True:
     try:
       frame = stream.get_frame()
       filename=f"{img_path}/{datetime.datetime.now().strftime('%c')}.jpg"
       
       if frame is not None:
-        msg_dict = _extract_model_prediction(model, frame)
+        msg_dict = _extract_model_prediction(model, frame, device)
         
         if msg_dict is not None:
           activation += step
