@@ -7,22 +7,30 @@ A small side project to use old IPcam/Android phone as cat detection camera, com
 
 - (Optional) Docker with compose plugin installed on the device mentioned above or any other device that is capable of handling docker. This is for self-host [ntfy](https://ntfy.sh). Other options should also be considered as well. For more detail, check out [Known Issue](#known-issues) section of this article.
 
-- A functioning IP camera, or a functioning Android phone with IP camera app such as [IP webcam](https://play.google.com/store/apps/details?id=com.pas.webcam&hl=en) installed. I didn't research for iOS devices, but there should be some compatible options.
+- A functioning IP camera, or a functioning Android phone with IP camera app such as [IP webcam](https://play.google.com/store/apps/details?id=com.pas.webcam&hl=en) installed. I didn't search for alternative for iOS devices, but there should be some compatible options.
 
 - An already built conda environment (or other virtual environment of choice) with packages in [requirement.txt](requirement.txt). Detailed installation guide is in [Step.1](#step1-build-virtual-environment)
 
 
 ## Usage
-### Step.0 Clone/Download This Repo
+### Step 0. Clone/Download This Repo
+#### Github CLI
 Head to the directory your going to store all of the code of this project.
 
 ```shell
 gh repo clone Qiucha/IPcam-Cat-Detection
 ```
 
-or directly download through `Code > Download zip` on this page.
+#### git
+```shell
+git clone https://github.com/Qiucha/IPcam-Cat-Detection.git
+```
 
-### Step.1 Build Virtual Environment
+#### Manual Download
+Download through `Code > Download zip` on this page.
+
+
+### Step 1. Build Virtual Environment
 Here, [conda](https://www.anaconda.com/) is used as an example, use whatever the virtual environment tool you're familiar with.
 ```shell
 conda create -n ipcd python=3.12 -y
@@ -31,9 +39,9 @@ After that, do:
 ```shell
 conda activate ipcd; pip install -r requirement.txt
 ```
-Note that this would install all the packages with specific version, if indicated, in the [requirement.txt](requirement.txt).
+> Note that this would install all the packages with specific version with the dependencies, in the [requirement.txt](requirement.txt).
 
-### Step.2 Create `.env` files in home directory of this project and `ntfy-docker` respectively.
+### Step 2. Create `.env` files in home directory of this project and `ntfy-docker` respectively.
 #### (Optional/Recommended) Use [`utils/__env_gen__.py`](utils/__env_gen__.py) for creating formatted `.env` files
 head to the home directory of the project in terminal and execute the following command:
 ```shell
@@ -86,15 +94,15 @@ TS_NTFY_CONFIG=[ex: ./ts/ntfy/config]
 TS_NTFY_STATE=[ex: ./ts/ntfy/state]
 ```
 
-### Step.3 Build Ntfy Server
-Here, the process using tailscale and docker is been shown, this could be replaced with other options of your own choice. Note that here a desktop docker environment is recommended for tailscale login without a ts-authkey. Otherwise, using a authkey could be a time-saver.
+### Step 3. Build Ntfy Server
+Here, the process using tailscale and docker is been shown, this could be replaced with other options of your own choice. Note that here a desktop docker environment is recommended for tailscale login without a ts-authkey. Otherwise, using an authkey could lead to a smoother depolyment.
 
 #### 3.1. Setup `ntfy-docker` docker container stack
 ```shell
 cd ntfy-docker
 docker compose up -d
 ```
-Login to your tailscale account via the link provided in ts-ntfy docker log interface. Or add your ts-authkey in the `docker-compose.yml` file by uncommenting the `TS_AUTHKEY=...` line and add your ts-auth key to it in the [`docker-compose.yaml`](ntfy-docker/docker-compose.yaml) file.
+Login to your tailscale account via the link provided in ts-ntfy docker log interface. Or use your ts-authkey in the `docker-compose.yaml` file by uncommenting the `TS_AUTHKEY=...` line and add your ts-auth key to it in the [`docker-compose.yaml`](ntfy-docker/docker-compose.yaml) file.
 
 #### 3.2. Make some necessary file in `ntfy` docker container
 Head to execute tab of `ntfy` docker container in docker desktop.
@@ -131,7 +139,7 @@ tailscale serve --bg 80;
 tailscale serve status --json >> /config/serve.json
 ``` 
 
-### Step.4 Install Ntfy App on your phone
+### Step 4. Install Ntfy App on your phone
 - Android: [ntfy on Google Playstore](https://play.google.com/store/apps/details?id=io.heckel.ntfy&hl=en)
 
 - iOS: [ntfy on App Store](https://apps.apple.com/us/app/ntfy/id1625396347)
@@ -144,7 +152,7 @@ Remember to setup your server url and user credits according to the settings abo
 ### Final Step. Have fun with your cat!
 Play with a test cat picture with [pilot.ipynb](pilot.ipynb) or deploy the [main.py](main.py) directly!
 
-To use [pilot.ipynb](pilot.ipynb), check out a IDE that supports jupyter notebook for better experience; To use [main.py](main.py) directly and depoly the program, head to the home directory of this project and use the terminal command shown below; Or even better, use/modify this project as blueprint to suit your own needs!
+To use [pilot.ipynb](pilot.ipynb), check out an IDE that supports jupyter notebook for better experience; To use [main.py](main.py) directly and depoly the program, head to the home directory of this project and use the terminal command shown below; Or even better, use/modify this project as blueprint to suit your own needs!
 
 ```shell
 conda activate ipcd
@@ -179,9 +187,9 @@ For a base macbook air M1 (8G RAM), the inference time is around **10** ms avg.
 User could, and probably should set threshold and step in [`main.py`](main.py) according to the ability, inference time, of your own device.
 
 ## Story behind the project
-There's a cat near my parents place that my parents liked that little kitty and wanted to feed her anytime she comes by. However, she does not make any sound and that makes them hard to notice. So an idea of cat detection camera comes to our mind.
+There's a cat near my parents place that my parents like and want to feed her anytime she comes by. However, she does not make any sound and that makes them hard to notice. So an idea of cat detection camera comes to our mind.
 
-There're some existing projects which mostly use raspberry pi and raspberry pi camera to achieve this functionality, but there's a spare old IP camera in their place and they don't want to spend much when there's alternative. That's why I'm doing this project to utilize the old IP camera and the mac mini that they're barely using, but still needed for work.
+There're some existing projects which mostly use raspberry pi and raspberry pi camera to achieve this functionality, search youtube for keyword: "Raspberry Pi Pet Detection" for detail. This project is only started because there's a spare old IP camera in their place and they don't want to spend much when there's alternative. That's why I'm doing this project to utilize the old IP camera and the mac mini that they're barely using.
 
 
 ## Known Issues
