@@ -216,4 +216,4 @@ ntfy-docker/ts/*
 ntfy-docker/ntfy/*
 
 # MacOS files
-*/.DS_Store
+.DS_Store
