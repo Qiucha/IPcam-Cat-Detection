@@ -2,18 +2,25 @@
 A small side project to use old IPcam/Android phone as cat detection camera, combined with Raspberry or mac mini like power efficient computing platform.
 
 ## Prerequisites
-- An already built [Ntfy server](https://ntfy.sh/), or a docker compose instance. For detail, follow [Step.2 and 3](#step2-create-env-files-in-home-directory-of-this-project-and-ntfy-docker-respectively)
-- An already set up IP Camera, or a functioning Android phone with IPCamera app such as [IP webcam](https://play.google.com/store/apps/details?id=com.pas.webcam&hl=en). Didn't research for iOS devices.
-- An `.env` file that is in the format indicated in [Step.2](#step2-create-env-files-in-home-directory-of-this-project-and-ntfy-docker-respectively).
+
+- A computer or IoT device that is capable of handling the object detection model efficiently.
+
+- (Optional) Docker installed on the device mentioned above, with the compose plugin. This is for self-host [ntfy](https://ntfy.sh). Other options should also be considered as well. For more detail, check out [Known Issue](#known-issues) section of this article.
+
+- A functioning IP camera, or a functioning Android phone with IP camera app such as [IP webcam](https://play.google.com/store/apps/details?id=com.pas.webcam&hl=en) installed. I didn't research for iOS devices, but there should be some compatible options.
+
 - An already built conda environment (or other virtual environment of choice) with packages in [requirement.txt](requirement.txt). Detailed installation guide is in [Step.1](#step1-build-virtual-environment)
 
 
 ## Usage
 ### Step.0 Clone/Download This Repo
+Head to the directory your going to store all of the code of this project.
+
 ```shell
 gh repo clone Qiucha/IPcam-Cat-Detection
 ```
-or directly download through Code > Download zip.
+
+or directly download through `Code > Download zip` on this page.
 
 ### Step.1 Build Virtual Environment
 Here, [conda](https://www.anaconda.com/) is used as an example, use whatever the virtual environment tool you're familiar with.
@@ -27,7 +34,7 @@ conda activate ipcd; pip install -r requirement.txt
 Note that this would install all the packages with specific version, if indicated, in the [requirement.txt](requirement.txt).
 
 ### Step.2 Create `.env` files in home directory of this project and `ntfy-docker` respectively.
-#### (Optional/Recommended) Use [`utils/__env_gen__.py`](utils/__env_gen__.py) for formatting
+#### (Optional/Recommended) Use [`utils/__env_gen__.py`](utils/__env_gen__.py) for creating formatted `.env` files
 head to the home directory of the project in terminal and execute the following command:
 ```shell
 python utils/__env_gen__.py
@@ -87,10 +94,11 @@ Here, the process using tailscale and docker is been shown, this could be replac
 cd ntfy-docker
 docker compose up -d
 ```
-Login to your tailscale account via the link provided in ts-ntfy docker log interface.
+Login to your tailscale account via the link provided in ts-ntfy docker log interface. Or add your ts-authkey in the `docker-compose.yml` file by uncommenting the `TS_AUTHKEY=...` line and add your ts-auth key to it in the [`docker-compose.yaml`](ntfy-docker/docker-compose.yaml) file.
 
 #### 3.2. Make some necessary file in `ntfy` docker container
 Head to execute tab of `ntfy` docker container in docker desktop.
+
 ```shell
 mkdir /var/cache/ntfy/attachments;
 touch /etc/ntfy/server.yml;
