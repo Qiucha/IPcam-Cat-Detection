@@ -227,7 +227,6 @@ if __name__ == "__main__":
         model_act_step = 10
 
         while model_activation > 0 and msg_activation >= 0:
-
           msg_dict = _extract_model_prediction(model, frame, device)
           
           if msg_dict is not None:
@@ -245,9 +244,11 @@ if __name__ == "__main__":
               msg_dict = msg_dict,
               ntfy_user = ntfy_user,
               ntfy_pass = ntfy_pass,
-              img_path = filename)
+              img_path = filename
+            )
             
             time.sleep(suspend)
+            break
         
         if msg_activation != msg_n_init_act:
           msg_activation = msg_n_init_act
