@@ -186,6 +186,9 @@ For a base macbook air M1 (8G RAM), the inference time is around **10** ms avg.
 
 User could, and probably should set threshold and step in [`main.py`](main.py) according to the ability, inference time, of your own device.
 
+> [!NOTE] After deployment... 
+I found that our old IPcam could be too crappy with regard to resolution. Also, the model `yolov8n.pt` tends to confuse when trying to distinguish cats from dogs. Using `yolov8m.pt` yields better detection performance while taking up approx. 3 times the inference time. This performance/efficiency trade-off decision should be done on your own! Otherwise, finetuning the smaller model to better fit your need could also be a viable option.
+
 ## Story behind the project
 There's a cat near my parents place that my parents like and want to feed her anytime she comes by. However, she does not make any sound and that makes them hard to notice. So an idea of cat detection camera comes to our mind.
 
