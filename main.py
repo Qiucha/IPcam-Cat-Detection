@@ -62,14 +62,14 @@ def _extract_model_prediction(model, img, device) -> dict:
     msg_dict = {
       "pr": "default",
       "title": "Cat Detected!",
-      "msg": f"Found cat at confedence level: {conf}",
+      "msg": f"Found cat at conf lv.: {conf*100:.2f}%",
       "tags": "tada"
     }
   elif max_conf >= 0.3:
     msg_dict = {
       "pr": "low",
       "title": "Cat Detected! Probably...",
-      "msg": f"Found cat at confedence level: {conf}. This could be wrong.",
+      "msg": f"Found cat at conf lv: {conf*100:.2f}%. This could be wrong.",
       "tags": "tada"
     }
 
