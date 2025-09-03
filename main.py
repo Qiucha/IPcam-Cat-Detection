@@ -114,6 +114,20 @@ def _chk_crt_path(path):
     raise ValueError("path given exists and is not a directory.")
 
 
+def _extract_info_diff(prev_frame, frame):
+  fram_diff = None
+  info_KB = 0
+  if prev_frame is not None and frame is not None:
+    frame = cv2.fastNlMeansDenoisingColored(frame)
+    prev_frame = cv2.fastNlMeansDenoisingColored(prev_frame)
+    fram_diff = frame - prev_frame
+    
+    info_bits = torch.tensor(fram_diff).abs().log2()
+    info_bits = (info_bits.nan_to_num() * ~torch.isneginf(info_bits)) # in bits
+    info_KB = info_bits.sum()/(8*1024)
+  return info_KB, fram_diff
+
+
 class RTSPStream:
   def __init__(self, rtsp_url):
     self.rtsp_url = rtsp_url
@@ -162,6 +176,8 @@ if __name__ == "__main__":
 
   # notification/process suspend after activation (in seconds)
   suspend = int(os.getenv('SUSPEND'))
+  
+  show = True
 
   # Set environment for rtsp_transport
   os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;0"
@@ -172,41 +188,73 @@ if __name__ == "__main__":
 
   stream = RTSPStream(url)
 
-  threshold = 500
-  activation = 0
-  step = 20
+  msg_n_init_act = 500
+  det_thres = 80 # info difference threshold for activate model (in KB)
+
+  msg_act_thres = 1000
+  msg_activation = msg_n_init_act
+  msg_act_step = 20
+
   if suspend == "" or suspend is None:
     suspend = 600 # in seconds
   device = _setup_torch_device()
   
   while True:
     try:
+      try:
+        if frame is not None:
+          prev_frame = frame
+          fram_diff = np.empty(frame.shape)
+        else:
+          prev_frame = None
+          fram_diff = None
+      except NameError:
+        prev_frame = None
+
       frame = stream.get_frame()
       filename=f"{img_path}/{datetime.datetime.now().strftime('%c')}.jpg"
       
-      if frame is not None:
-        msg_dict = _extract_model_prediction(model, frame, device)
-        
-        if msg_dict is not None:
-          activation += step
-        elif activation >= 0:
-          activation -= (step/10)
+      info_KB, fram_diff = _extract_info_diff(prev_frame=prev_frame, frame=frame)
 
-        if activation >= threshold:
-          cv2.imwrite(filename, frame)
-          _push_ntfy(
-            host = host, 
-            topic = topic,
-            msg_dict = msg_dict,
-            ntfy_user = ntfy_user,
-            ntfy_pass = ntfy_pass,
-            img_path = filename)
+      if frame is not None and info_KB > det_thres:
+        print(f"info differences in KB: {info_KB:.2f}")
+
+        if fram_diff is not None and show:
+          cv2.imshow(winname="diff", mat=fram_diff)
+          cv2.waitKey(1)
+
+        model_activation = 100
+        model_act_step = 10
+
+        while model_activation > 0 and msg_activation >= 0:
+
+          msg_dict = _extract_model_prediction(model, frame, device)
           
+          if msg_dict is not None:
+            msg_activation += msg_act_step
+            model_activation += model_act_step
+          elif msg_activation >= 0:
+            msg_activation -= (msg_act_step/10)
+            model_activation -= model_act_step
 
-          time.sleep(suspend)
-          activation = 0
+          if msg_activation >= msg_act_thres:
+            cv2.imwrite(filename, frame)
+            _push_ntfy(
+              host = host, 
+              topic = topic,
+              msg_dict = msg_dict,
+              ntfy_user = ntfy_user,
+              ntfy_pass = ntfy_pass,
+              img_path = filename)
+            
+            time.sleep(suspend)
+        
+        if msg_activation != msg_n_init_act:
+          msg_activation = msg_n_init_act
         
     except KeyboardInterrupt:
       break
-
+  
+  cv2.destroyAllWindows()
+  cv2.waitKey(1)
   stream.stop()
