@@ -227,6 +227,9 @@ if __name__ == "__main__":
         model_act_step = 10
 
         while model_activation > 0 and msg_activation >= 0:
+          frame = stream.get_frame()
+          filename=f"{img_path}/{datetime.datetime.now().strftime('%c')}.jpg"
+
           msg_dict = _extract_model_prediction(model, frame, device)
           
           if msg_dict is not None:
