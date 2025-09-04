@@ -10,7 +10,6 @@ import torch
 
 import threading
 
-import time
 import datetime
 
 import base64
@@ -20,6 +19,7 @@ Load .env content, check out README.md for more details
 """
 from dotenv import load_dotenv
 import os
+os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;0"
 
 # This is only for Android IP webcam, which I'm not actively using.
 def _get_img_from_ipcam_stream(
@@ -161,9 +161,9 @@ if __name__ == "__main__":
   password = os.getenv('PASSWORD')
   url = os.getenv('URL')
 
-  if (user != "") and (password != ""):
+  if (user != '') and (password != ''):
     url_li = url.split('//')
-    url = f"{url[0]}//{user}:{password}@{url_li[1]}"
+    url = f"{url_li[0]}//{user}:{password}@{url_li[1]}"
 
   # ntfy related information
   ntfy_user=os.getenv('NTFY_USER')
@@ -184,7 +184,8 @@ if __name__ == "__main__":
   show = True
 
   # Set environment for rtsp_transport
-  os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;0"
+  os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;udp"
+  os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_timeout;500000"
 
   if img_path == "" or img_path is None:
     img_path = proj_path+"/saved_img"
@@ -254,7 +255,7 @@ if __name__ == "__main__":
               img_path = filename
             )
             
-            time.sleep(suspend)
+            cv2.waitKey(suspend*1000)
             break
         
         if msg_activation != msg_n_init_act:
@@ -263,7 +264,8 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
       break
 
-    time.sleep(0.1)
+    if cv2.waitKey(50) == ord('q'):
+      break
 
   cv2.destroyAllWindows()
   cv2.waitKey(1)
