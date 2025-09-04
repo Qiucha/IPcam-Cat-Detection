@@ -161,7 +161,7 @@ if __name__ == "__main__":
   password = os.getenv('PASSWORD')
   url = os.getenv('URL')
 
-  if (user is not None or user == "") and (password is not None or password == ""):
+  if (user != "") and (password != ""):
     url_li = url.split('//')
     url = f"{url[0]}//{user}:{password}@{url_li[1]}"
 
@@ -264,7 +264,7 @@ if __name__ == "__main__":
       break
 
     time.sleep(0.1)
-    
+
   cv2.destroyAllWindows()
   cv2.waitKey(1)
   stream.stop()
