@@ -262,7 +262,9 @@ if __name__ == "__main__":
         
     except KeyboardInterrupt:
       break
-  
+
+    time.sleep(0.1)
+    
   cv2.destroyAllWindows()
   cv2.waitKey(1)
   stream.stop()
