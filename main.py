@@ -161,6 +161,10 @@ if __name__ == "__main__":
   password = os.getenv('PASSWORD')
   url = os.getenv('URL')
 
+  if (user is not None or user == "") and (password is not None or password == ""):
+    url_li = url.split('//')
+    url = f"{url[0]}//{user}:{password}@{url_li[1]}"
+
   # ntfy related information
   ntfy_user=os.getenv('NTFY_USER')
   ntfy_pass=os.getenv('NTFY_PASS')
@@ -217,7 +221,7 @@ if __name__ == "__main__":
       info_KB, fram_diff = _extract_info_diff(prev_frame=prev_frame, frame=frame)
 
       if frame is not None and info_KB > det_thres:
-        print(f"info differences in KB: {info_KB:.2f}")
+        print(f"info differences in approx. KB: {info_KB:.2f}KB")
 
         if fram_diff is not None and show:
           cv2.imshow(winname="diff", mat=fram_diff)
@@ -237,7 +241,7 @@ if __name__ == "__main__":
             model_activation += model_act_step
           elif msg_activation >= 0:
             msg_activation -= (msg_act_step/10)
-            model_activation -= model_act_step
+            model_activation -= (model_act_step/5)
 
           if msg_activation >= msg_act_thres:
             cv2.imwrite(filename, frame)
