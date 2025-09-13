@@ -198,3 +198,6 @@ There're some existing projects which mostly use raspberry pi and raspberry pi c
 ## Known Issues
 ### iOS Ntfy compatibility issue
 This is known issue to me before starting this project. Not a deal breaker for me personally, but definitely a point to consider. For a comprehensive read, checkout [Ntfy — Self-hosted push notification server for all your services](https://akashrajpurohit.com/blog/selfhost-ntfy-for-push-notifications/).
+
+### Memory Usage Seems to Pile Up
+I'm not 100% percent sure the reason. Potential issues could be some hanging process not being cleaned after finished executing. Currently, with a `yolov8m.pt` model, the memory would go up to about 11G after two days. A dumb way to solve this is add a script to restart `main.py` after a certain amount of time, essentially closes the program and start it again.
