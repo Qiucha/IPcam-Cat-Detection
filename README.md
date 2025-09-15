@@ -9,7 +9,7 @@ A small side project to use old IPcam/Android phone as cat detection camera, com
 
 - A functioning IP camera, or a functioning Android phone with IP camera app such as [IP webcam](https://play.google.com/store/apps/details?id=com.pas.webcam&hl=en) installed. I didn't search for alternative for iOS devices, but there should be some compatible options.
 
-- An already built conda environment (or other virtual environment of choice) with packages in [requirement.txt](requirement.txt). Detailed installation guide is in [Step.1](#step1-build-virtual-environment)
+- An already built conda environment (or other virtual environment of choice) with packages in [requirements.txt](requirements.txt). Detailed installation guide is in [Step.1](#step1-build-virtual-environment)
 
 
 ## Usage
@@ -37,9 +37,9 @@ conda create -n ipcd python=3.12 -y
 ```
 After that, do:
 ```shell
-conda activate ipcd; pip install -r requirement.txt
+conda activate ipcd; pip install -r requirements.txt
 ```
-> Note that this would install all the packages with specific version with the dependencies, in the [requirement.txt](requirement.txt).
+> Note that this would install all the packages with specific version with the dependencies, in the [requirements.txt](requirements.txt).
 
 ### Step 2. Create `.env` files in home directory of this project and `ntfy-docker` respectively.
 #### (Optional/Recommended) Use [`utils/__env_gen__.py`](utils/__env_gen__.py) for creating formatted `.env` files
