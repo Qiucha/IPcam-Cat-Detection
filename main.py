@@ -19,7 +19,6 @@ Load .env content, check out README.md for more details
 """
 from dotenv import load_dotenv
 import os
-os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;0"
 
 # This is only for Android IP webcam, which I'm not actively using.
 def _get_img_from_ipcam_stream(
@@ -54,18 +53,18 @@ def _extract_model_prediction(model, img, device) -> dict:
   max_conf = 0
 
   for conf, cs in zip(result.boxes.conf, result.boxes.cls):
-    if conf >= 0.3 and result.names[int(cs)] == 'cat' and (conf >= max_conf):
+    if conf >= 0.35 and result.names[int(cs)] == 'cat' and (conf >= max_conf):
       max_conf = conf
   
   msg_dict = None
-  if max_conf >= 0.8:
+  if max_conf >= 0.7:
     msg_dict = {
       "pr": "default",
       "title": "Cat Detected!",
       "msg": f"Found cat at conf lv.: {conf*100:.2f}%",
       "tags": "tada"
     }
-  elif max_conf >= 0.3:
+  elif max_conf >= 0.35:
     msg_dict = {
       "pr": "low",
       "title": "Cat Detected! Probably...",
@@ -129,20 +128,56 @@ def _extract_info_diff(prev_frame, frame):
 
 
 class RTSPStream:
-  def __init__(self, rtsp_url):
+  def __init__(self, rtsp_url, host, discon_topic, ntfy_user, ntfy_pass):
     self.rtsp_url = rtsp_url
     self.cap = cv2.VideoCapture(self.rtsp_url, cv2.CAP_FFMPEG)
     self.frame = None
     self.lock = threading.Lock()
     self.running = True
+
+    # Ntfy params for disconnection notification
+    self.host = host
+    self.discon = discon_topic
+    self.ntfy_user = ntfy_user
+    self.ntfy_pass = ntfy_pass
+
+    ## set activation params
+    self.neuron = 0
+    self.neuron_neutral = 0
+    self.act_thres = 10
+
     threading.Thread(target=self.update, daemon=True).start()
 
   def update(self):
     while self.running:
+
+      if not self.cap.isOpened():
+        self.neuron += 1
+        if self.neuron >= self.act_thres:
+          self._push_discon_ntfy()
+          self.neuron = self.neuron_neutral
+
       ret, frame = self.cap.read()
       if ret:
+        if self.neuron >= self.neuron_neutral:
+          self.neuron = self.neuron_neutral
+
         with self.lock:
           self.frame = frame
+
+  def _push_discon_ntfy(self):
+    auth = base64.b64encode((self.ntfy_user+":"+self.ntfy_pass).encode('UTF-8'))
+    
+    requests.post(
+      f"https://{self.host}/{self.discon}",               
+      data="check IPCam connection!".encode(encoding='utf-8'),
+      headers={
+        "Authorization": auth,
+        "Title": "IPCam disconnected!",
+        "Priority": "default",
+        "Tags": "warning"
+      }
+    )
 
   def get_frame(self):
     with self.lock:
@@ -171,6 +206,9 @@ if __name__ == "__main__":
   host = os.getenv('HOSTNAME')
   topic = os.getenv('TOPIC')
 
+  # disconnect ntfy topic
+  discon_topic = os.getenv('DISCON_TOPIC')
+
   # path related, if IMG_SAVE_PATH is not set, save_img would be set to PROJ_PATH/saved_img 
   proj_path = os.getenv('PROJ_PATH')
   img_path = os.getenv('IMG_SAVE_PATH')
@@ -181,7 +219,7 @@ if __name__ == "__main__":
   # notification/process suspend after activation (in seconds)
   suspend = int(os.getenv('SUSPEND'))
   
-  show = True
+  show = False
 
   # Set environment for rtsp_transport
   os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;udp"
@@ -191,7 +229,13 @@ if __name__ == "__main__":
     img_path = proj_path+"/saved_img"
   _chk_crt_path(img_path)
 
-  stream = RTSPStream(url)
+  stream = RTSPStream(
+    rtsp_url=url,
+    host=host,
+    discon_topic=discon_topic,
+    ntfy_user=ntfy_user,
+    ntfy_pass=ntfy_pass
+  )
 
   msg_n_init_act = 500
   det_thres = 80 # info difference threshold for activate model (in KB)
@@ -256,6 +300,7 @@ if __name__ == "__main__":
             )
             
             cv2.waitKey(suspend*1000)
+            print("Press ANY key to keep detecting and send message!")
             break
         
         if msg_activation != msg_n_init_act:

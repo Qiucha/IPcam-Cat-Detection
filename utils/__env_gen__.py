@@ -21,6 +21,9 @@ NTFY_PASS=
 HOSTNAME=
 TOPIC=
 
+# Disconnect notification
+DISCON_TOPIC=
+
 # Load model for object recognition
 MODEL=
 
