@@ -154,8 +154,9 @@ class RTSPStream:
       if not self.cap.isOpened():
         self.neuron += 1
         if self.neuron >= self.act_thres:
-          self._push_discon_ntfy()
+          self._push_discon_ntfy(mode="disconnect")
           self.neuron = self.neuron_neutral
+          cv2.waitKey(3600*1000) # wait for 1 hour
 
       ret, frame = self.cap.read()
       if ret:
@@ -164,20 +165,50 @@ class RTSPStream:
 
         with self.lock:
           self.frame = frame
+      else:
+        self.neuron += 1
+        if self.neuron >= self.act_thres:
+          self._push_discon_ntfy(mode="timeout")
+          self.neuron = self.neuron_neutral
+          cv2.waitKey(3600*1000) # wait for 1 hour
 
-  def _push_discon_ntfy(self):
+  def _push_discon_ntfy(self, mode):
     auth = base64.b64encode((self.ntfy_user+":"+self.ntfy_pass).encode('UTF-8'))
     
-    requests.post(
-      f"https://{self.host}/{self.discon}",               
-      data="check IPCam connection!".encode(encoding='utf-8'),
-      headers={
-        "Authorization": auth,
-        "Title": "IPCam disconnected!",
-        "Priority": "default",
-        "Tags": "warning"
-      }
-    )
+    if mode == "timeout":
+      requests.post(
+        f"https://{self.host}/{self.discon}",               
+        data="restart the program!".encode(encoding='utf-8'),
+        headers={
+          "Authorization": auth,
+          "Title": "IPCam framecap timeout!",
+          "Priority": "default",
+          "Tags": "warning"
+        }
+      )
+    elif mode == "disconnect":
+      requests.post(
+        f"https://{self.host}/{self.discon}",               
+        data="check IPCam connection!".encode(encoding='utf-8'),
+        headers={
+          "Authorization": auth,
+          "Title": "IPCam disconnected!",
+          "Priority": "default",
+          "Tags": "warning"
+        }
+      )
+    else:
+      requests.post(
+        f"https://{self.host}/{self.discon}",               
+        data="mode not set!".encode(encoding='utf-8'),
+        headers={
+          "Authorization": auth,
+          "Title": "discon_ntfy with mode not set!",
+          "Priority": "default",
+          "Tags": "warning"
+        }
+      )
+
 
   def get_frame(self):
     with self.lock:
