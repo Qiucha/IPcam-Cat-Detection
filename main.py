@@ -119,7 +119,7 @@ def _extract_info_diff(prev_frame, frame):
   if prev_frame is not None and frame is not None:
     frame = cv2.fastNlMeansDenoisingColored(frame)
     prev_frame = cv2.fastNlMeansDenoisingColored(prev_frame)
-    fram_diff = frame - prev_frame
+    fram_diff = cv2.absdiff(prev_frame, frame)
     
     info_bits = torch.tensor(fram_diff).abs().log2()
     info_bits = (info_bits.nan_to_num() * ~torch.isneginf(info_bits)) # in bits
@@ -149,6 +149,7 @@ class RTSPStream:
     threading.Thread(target=self.update, daemon=True).start()
 
   def update(self):
+    tried = False
     while self.running:
 
       if not self.cap.isOpened():
@@ -167,10 +168,16 @@ class RTSPStream:
           self.frame = frame
       else:
         self.neuron += 1
-        if self.neuron >= self.act_thres:
+        if self.neuron >= self.act_thres and not tried:
+          self.cap.release()
+          self.cap = cv2.VideoCapture(self.rtsp_url, cv2.CAP_FFMPEG)
+          tried = True
+        elif self.neuron >= self.act_thres and tried:
           self._push_discon_ntfy(mode="timeout")
           self.neuron = self.neuron_neutral
           cv2.waitKey(3600*1000) # wait for 1 hour
+        else:
+          print(f"something goes wrong.")
 
   def _push_discon_ntfy(self, mode):
     auth = base64.b64encode((self.ntfy_user+":"+self.ntfy_pass).encode('UTF-8'))
@@ -297,7 +304,7 @@ if __name__ == "__main__":
       info_KB, fram_diff = _extract_info_diff(prev_frame=prev_frame, frame=frame)
 
       if frame is not None and info_KB > det_thres:
-        print(f"info differences in approx. KB: {info_KB:.2f}KB")
+        print(f"\ninfo differences in approx. KB: {info_KB:.2f}KB")
 
         if fram_diff is not None and show:
           cv2.imshow(winname="diff", mat=fram_diff)
@@ -330,8 +337,8 @@ if __name__ == "__main__":
               img_path = filename
             )
             
-            cv2.waitKey(suspend*1000)
             print("Press ANY key to keep detecting and send message!")
+            cv2.waitKey(suspend*1000)
             break
         
         if msg_activation != msg_n_init_act:

@@ -210,6 +210,7 @@ __marimo__/
 # self defined files to ignore
 test_img/*
 saved_img/*
+saved_vid/*
 */.env
 *.pt
 ntfy-docker/ts/*
