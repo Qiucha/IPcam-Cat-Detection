@@ -127,10 +127,61 @@ def _extract_info_diff(prev_frame, frame):
   return info_KB, fram_diff
 
 
+# Video Saver Implementation
+import signal
+class TimeoutException(Exception):
+  pass
+
+def timeout_handler(signum, frame):
+  raise TimeoutException
+
+
+def _save_video(cap:cv2.VideoCapture, out_path:str = None, suspend:int = 5):
+  signal.signal(signal.SIGALRM, timeout_handler)
+  signal.alarm(suspend)
+
+  # Get current time
+  time_now = datetime.datetime.now().strftime('%c')
+
+  # Extract Video Frame Size from Cap
+  fps = int(cap.get(cv2.CAP_PROP_FPS))
+  width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+  height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+
+  # Set up Stream Video Writer
+  fourcc = cv2.VideoWriter_fourcc(*'h264')
+  out = cv2.VideoWriter(f"{out_path}/{time_now}.mp4", fourcc, fps, (width, height))
+
+  while True:
+    try:
+      ret, frame = cap.read()
+      
+      if not ret:
+        print("stream.cap ret is None when trying to save video!")
+        break
+      
+      
+
+
+      out.write(frame)
+    except NameError:
+      prev_frame = None
+  
+  out.release()
+  cap.release()
+
+
 class RTSPStream:
-  def __init__(self, rtsp_url, host, discon_topic, ntfy_user, ntfy_pass):
+  def __init__(self, rtsp_url, gstr, host, discon_topic, ntfy_user, ntfy_pass):
     self.rtsp_url = rtsp_url
-    self.cap = cv2.VideoCapture(self.rtsp_url, cv2.CAP_FFMPEG)
+    self.gstr = gstr
+
+    if rtsp_url is None:
+      self.cap = cv2.VideoCapture(self.gstr, cv2.CAP_GSTREAMER)
+    else:
+      self.cap = cv2.VideoCapture(self.rtsp_url, cv2.CAP_FFMPEG)
+    
     self.frame = None
     self.lock = threading.Lock()
     self.running = True
@@ -233,6 +284,8 @@ if __name__ == "__main__":
   user = os.getenv('USER')
   password = os.getenv('PASSWORD')
   url = os.getenv('URL')
+  url_without_port = url.split(':')[0] + '://' + url.split(':')[1].split('/')[2]
+  gstr = f"rtspsrc location={url_without_port} port=554 ! latency=0 ! rtph264depay ! h264parse ! avdec_h264 ! videoconvert ! appsink"
 
   if (user != '') and (password != ''):
     url_li = url.split('//')
@@ -250,6 +303,7 @@ if __name__ == "__main__":
   # path related, if IMG_SAVE_PATH is not set, save_img would be set to PROJ_PATH/saved_img 
   proj_path = os.getenv('PROJ_PATH')
   img_path = os.getenv('IMG_SAVE_PATH')
+  vid_path = os.getenv('VID_SAVE_PATH')
 
   # Load model for object recognition
   model = YOLO(os.getenv('MODEL'))
@@ -265,10 +319,15 @@ if __name__ == "__main__":
 
   if img_path == "" or img_path is None:
     img_path = proj_path+"/saved_img"
+  if vid_path == "" or vid_path is None:
+    vid_path = proj_path+"/saved_vid"
+  
   _chk_crt_path(img_path)
+  _chk_crt_path(vid_path)
 
   stream = RTSPStream(
     rtsp_url=url,
+    gstr=gstr,
     host=host,
     discon_topic=discon_topic,
     ntfy_user=ntfy_user,
