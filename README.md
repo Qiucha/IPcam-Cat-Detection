@@ -128,7 +128,7 @@ attachment-file-size-limit: "15M"
 attachment-expiry-duration: "3h"
 visitor-attachment-total-size-limit: "100M"
 visitor-attachment-daily-bandwidth-limit: "500M"
-upstream-base-utl: "https://ntfy.sh"
+upstream-base-url: "https://ntfy.sh"
 ```
 
 > [!NOTE] 
