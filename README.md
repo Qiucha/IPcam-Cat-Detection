@@ -174,18 +174,14 @@ To end the loop, use keyboard interruption, usually by focusing on the terminal 
 ## Note on Performance
 Using pretrained model 'yolov8n.pt' from [ultralytic](https://docs.ultralytics.com/models/yolov8/#supported-tasks-and-modes). Tested with mac mini M4 (16G RAM), macbook air M1 (8G RAM) and a raspberry pi 4B (8G model).
 
-### CPU Inference
-For a mostly idle mac mini M4 (16G RAM), the inference time is around **22** ms avg.
 
-For a base macbook air M1 (8G RAM), the inference time is around **50** ms avg. Note that this machine is almost always busy running other processes.
-
-For raspberry pi 4B (8G RAM) model, the inference time is around **850** ms. Note that this machine is also running other processes, tho not as demanding as M1 macbook air.
-
-
-### GPU/MPS Inference
-For a mostly idle mac mini M4 (16G RAM), the inference time is around **6** ms avg.
-
-For a base macbook air M1 (8G RAM), the inference time is around **10** ms avg.
+### Performance
+| Device | CPU | GPU/MPS |
+| --- | --- | --- |
+| Mac Mini M4 (16G RAM) | 22 ms | 6 ms |
+| Macbook Air M1 (8G RAM) | 50 ms | 10 ms |
+| Raspberry Pi 4B (8G RAM) | 850 ms | N/A |
+> Average inference time noted. Note that both M1 macbook air and raspberry pi 4B are running other processes.
 
 
 User could, and probably should set threshold and step in [`main.py`](main.py) according to the ability, inference time, of your own device.
