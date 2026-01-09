@@ -1,6 +1,9 @@
 # IPcam Cat Detection
 A small side project to use old IPcam/Android phone as cat detection camera, combined with Raspberry or mac mini like power efficient computing platform.
 
+## Demo
+![demo image for ntfy on phone](demo_img/demo.PNG)
+
 ## Prerequisites
 
 - A computer or IoT device that is capable of handling the object detection model efficiently.
