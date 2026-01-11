@@ -54,7 +54,6 @@ def _extract_model_prediction(model, img, device) -> dict:
 
 	return msg_dict
 
-
 def _push_cat_ntfy(
        	host:str = None,
        	topic:str = None,
@@ -63,6 +62,7 @@ def _push_cat_ntfy(
        	ntfy_pass:str = None,
        	img_path:str = None
     ) -> None:
+    auth = base64.b64encode((self.ntfy_user+":"+self.ntfy_pass).encode('UTF-8'))
 
     requests.post(
         f"https://{host}/{topic}",
@@ -102,7 +102,6 @@ def _extract_info_diff(prev_frame, frame) -> tuple[float, np.ndarray]:
 		info_bits = (info_bits.nan_to_num() * ~torch.isneginf(info_bits)) # in bits
 		info_KB = info_bits.sum()/(8*1024)
 	return info_KB, fram_diff
-
 
 class RTSPStream:
 	def __init__(self, rtsp_url, host, discon_topic, ntfy_user, ntfy_pass):
@@ -205,58 +204,64 @@ class RTSPStream:
 		self.cap.release()
 		return None
 
+class Config:
+	def __init__(self):
+		load_dotenv()
+		# webcam related information
+		self.user = os.getenv('USER')
+		self.password = os.getenv('PASSWORD')
+		self.url = os.getenv('URL')
+		if (self.user != '') and (self.password != ''):
+			self.url = f"{url_li[0]}//{self.user}:{self.password}@{self.url.split('//')[1]}"
+
+		# ntfy related information
+		self.ntfy_user=os.getenv('NTFY_USER')
+		self.ntfy_pass=os.getenv('NTFY_PASS')
+		self.host = os.getenv('HOSTNAME')
+		self.topic = os.getenv('TOPIC')
+
+		# disconnect ntfy topic
+		self.discon_topic = os.getenv('DISCON_TOPIC')
+
+		# path related, if IMG_SAVE_PATH is not set, save_img would be set to PROJ_PATH/saved_img
+		self.proj_path = os.getenv('PROJ_PATH')
+		self.img_path = os.getenv('IMG_SAVE_PATH')
+		if (self.img_path == "" or self.img_path is None):
+			self.img_path = self.proj_path+"/saved_img"
+
+		# model name for object recognition
+		self.model_name = os.getenv('MODEL')
+
+		# notification/process suspend after activation (in seconds)
+		self.suspend = int(os.getenv('SUSPEND'))
+		if self.suspend == "" or self.suspend is None:
+			self.suspend = 600 # in seconds
+
+		# show difference between frame
+		self.show = False
 
 if __name__ == "__main__":
-	load_dotenv()
-	# webcam related information
-	user = os.getenv('USER')
-	password = os.getenv('PASSWORD')
-	url = os.getenv('URL')
-
-	if (user != '') and (password != ''):
-		url_li = url.split('//')
-		url = f"{url_li[0]}//{user}:{password}@{url_li[1]}"
-
-	# ntfy related information
-	ntfy_user=os.getenv('NTFY_USER')
-	ntfy_pass=os.getenv('NTFY_PASS')
-	host = os.getenv('HOSTNAME')
-	topic = os.getenv('TOPIC')
-
-	# disconnect ntfy topic
-	discon_topic = os.getenv('DISCON_TOPIC')
-
-	# path related, if IMG_SAVE_PATH is not set, save_img would be set to PROJ_PATH/saved_img
-	proj_path = os.getenv('PROJ_PATH')
-	img_path = os.getenv('IMG_SAVE_PATH')
+	config = Config()
 
 	# Load model for object recognition
-	model = YOLO(os.getenv('MODEL'))
-
-	# notification/process suspend after activation (in seconds)
-	suspend = int(os.getenv('SUSPEND'))
-
-	show = False
+	model = YOLO(config.model_name)
 
 	# Set environment for rtsp_transport
 	os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;udp"
 	os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_timeout;500000"
 
-	if img_path == "" or img_path is None:
-		img_path = proj_path+"/saved_img"
-
 	# Make sure the path exist and is actually a pathname
-	if not os.path.exists(img_path):
-		os.mkdir(img_path)
-	elif not os.path.isdir(img_path):
+	if not os.path.exists(config.img_path):
+		os.mkdir(config.img_path)
+	elif not os.path.isdir(config.img_path):
 		raise ValueError("path given exists and is not a directory.")
 
 	stream = RTSPStream(
-		rtsp_url=url,
-		host=host,
-		discon_topic=discon_topic,
-		ntfy_user=ntfy_user,
-		ntfy_pass=ntfy_pass
+		rtsp_url=config.url,
+		host=config.host,
+		discon_topic=config.discon_topic,
+		ntfy_user=config.ntfy_user,
+		ntfy_pass=config.ntfy_pass
 	)
 
 	msg_n_init_act = 500
@@ -266,8 +271,6 @@ if __name__ == "__main__":
 	msg_activation = msg_n_init_act
 	msg_act_step = 20
 
-	if suspend == "" or suspend is None:
-		suspend = 600 # in seconds
 	device = torch.device("cuda:0" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
 
 	frame = None
@@ -280,13 +283,13 @@ if __name__ == "__main__":
 				fram_diff = np.empty(frame.shape)
 
 			frame = stream.get_frame()
-			filename=f"{img_path}/{datetime.datetime.now().strftime('%c')}.jpg"
+			filename=f"{config.img_path}/{datetime.datetime.now().strftime('%c')}.jpg"
 			info_KB, fram_diff = _extract_info_diff(prev_frame=prev_frame, frame=frame)
 
 			if frame is not None and info_KB > det_thres:
 				print(f"\ninfo differences in approx. KB: {info_KB:.2f}KB")
 
-				if fram_diff is not None and show:
+				if fram_diff is not None and config.show:
 					cv2.imshow(winname="diff", mat=fram_diff)
 					cv2.waitKey(1)
 
@@ -295,7 +298,7 @@ if __name__ == "__main__":
 
 				while model_activation > 0 and msg_activation >= 0:
 					frame = stream.get_frame()
-					filename=f"{img_path}/{datetime.datetime.now().strftime('%c')}.jpg"
+					filename=f"{config.img_path}/{datetime.datetime.now().strftime('%c')}.jpg"
 
 					msg_dict = _extract_model_prediction(model, frame, device)
 
@@ -309,27 +312,23 @@ if __name__ == "__main__":
 					if msg_activation >= msg_act_thres:
 						cv2.imwrite(filename, frame)
 						_push_cat_ntfy(
-							host = host,
-							topic = topic,
+							host = config.host,
+							topic = config.topic,
 							msg_dict = msg_dict,
-							ntfy_user = ntfy_user,
-							ntfy_pass = ntfy_pass,
+							ntfy_user = config.ntfy_user,
+							ntfy_pass = config.ntfy_pass,
 							img_path = filename
 						)
 
 						print("Press ANY key to keep detecting and send message!")
-						cv2.waitKey(suspend*1000)
+						cv2.waitKey(config.suspend*1000)
 						break
-
 				if msg_activation != msg_n_init_act:
 					msg_activation = msg_n_init_act
-
 		except KeyboardInterrupt:
 			break
-
 		if cv2.waitKey(50) == ord('q'):
 			break
-
 	cv2.destroyAllWindows()
 	cv2.waitKey(1)
 	stream.stop()
