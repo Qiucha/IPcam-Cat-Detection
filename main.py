@@ -11,6 +11,8 @@ import base64
 # Load .env content, check out README.md for more details
 from dotenv import load_dotenv
 import os
+import time
+import gc
 
 # This is only for Android IP webcam, which I'm not actively using.
 def _get_img_from_ipcam_stream(
@@ -41,14 +43,14 @@ def _extract_model_prediction(model, img, device) -> dict:
 		msg_dict = {
 			"pr": "default",
 			"title": "Cat Detected!",
-			"msg": f"Found cat at conf lv.: {conf*100:.2f}%",
+			"msg": f"Found cat at conf lv.: {max_conf*100:.2f}%",
 			"tags": "tada"
 		}
 	elif max_conf >= 0.35:
 		msg_dict = {
 			"pr": "low",
 			"title": "Cat Detected! Probably...",
-			"msg": f"Found cat at conf lv.: {conf*100:.2f}%. This could be wrong.",
+			"msg": f"Found cat at conf lv.: {max_conf*100:.2f}%. This could be wrong.",
 			"tags": "tada"
 		}
 
@@ -62,7 +64,7 @@ def _push_cat_ntfy(
        	ntfy_pass:str = None,
        	img_path:str = None
     ) -> None:
-    auth = base64.b64encode((self.ntfy_user+":"+self.ntfy_pass).encode('UTF-8'))
+    auth = base64.b64encode((ntfy_user+":"+ntfy_pass).encode('UTF-8'))
 
     requests.post(
         f"https://{host}/{topic}",
@@ -76,32 +78,35 @@ def _push_cat_ntfy(
     )
 
     if img_path is not None:
-        data = open(img_path, "rb")
-        filename = img_path.split('/')[-1]
-        requests.put(
- 			f"https://{host}/{topic}",
- 			data=data,
- 			headers={
-    				"Filename": filename,
-    				"Authorization": "Basic " + auth.decode('utf-8'),
-    				"Priority": msg_dict['pr'],
-    				"Tags": "camera_flash"
- 			}
-  		)
+    	with open(img_path, "rb") as data:
+	        filename = img_path.split('/')[-1]
+	        requests.put(
+	 			f"https://{host}/{topic}",
+	 			data=data,
+	 			headers={
+	    				"Filename": filename,
+	    				"Authorization": "Basic " + auth.decode('utf-8'),
+	    				"Priority": msg_dict['pr'],
+	    				"Tags": "camera_flash"
+	 			}
+	  		)
     return None
 
 def _extract_info_diff(prev_frame, frame) -> tuple[float, np.ndarray]:
-	fram_diff = None
-	info_KB = 0
-	if prev_frame is not None and frame is not None:
-		frame = cv2.fastNlMeansDenoisingColored(frame)
-		prev_frame = cv2.fastNlMeansDenoisingColored(prev_frame)
-		fram_diff = cv2.absdiff(prev_frame, frame)
+    fram_diff = None
+    info_KB = 0.0
+    if prev_frame is not None and frame is not None:
+        fram_diff = cv2.absdiff(prev_frame, frame)
 
-		info_bits = torch.tensor(fram_diff).abs().log2()
-		info_bits = (info_bits.nan_to_num() * ~torch.isneginf(info_bits)) # in bits
-		info_KB = info_bits.sum()/(8*1024)
-	return info_KB, fram_diff
+        diff_float = fram_diff.astype(np.float32)
+
+        with np.errstate(divide='ignore'):
+            info_bits = np.log2(diff_float)
+
+        info_bits[np.isneginf(info_bits)] = 0
+        info_bits = np.nan_to_num(info_bits)
+        info_KB = np.sum(info_bits) / (8 * 1024)
+    return info_KB, fram_diff
 
 class RTSPStream:
 	def __init__(self, rtsp_url, host, discon_topic, ntfy_user, ntfy_pass):
@@ -133,7 +138,7 @@ class RTSPStream:
 				if self.neuron >= self.act_thres:
 					self._push_discon_ntfy(mode="disconnect")
 					self.neuron = self.neuron_neutral
-					cv2.waitKey(3600*1000) # wait for 1 hour
+					time.sleep(3600) # wait for 1 hour
 
 			ret, frame = self.cap.read()
 			if ret:
@@ -151,11 +156,13 @@ class RTSPStream:
 				elif self.neuron >= self.act_thres and tried:
 					self._push_discon_ntfy(mode="timeout")
 					self.neuron = self.neuron_neutral
-					cv2.waitKey(3600*1000) # wait for 1 hour
+					time.sleep(3600) # wait for 1 hour
 				else:
+					self._push_discon_ntfy(mode=None)
 					print(f"something goes wrong.")
+					time.sleep(3600) # wait for 1 hour
 
-	def _push_discon_ntfy(self, mode) -> None:
+	def _push_discon_ntfy(self, mode:str = None) -> None:
 	    # Three mode accepted ["disconnect", "timeout", others(fallback)]
 		auth = base64.b64encode((self.ntfy_user+":"+self.ntfy_pass).encode('UTF-8'))
 
@@ -182,10 +189,10 @@ class RTSPStream:
     					"Tags": "warning"
     				}
     			)
-		    case _:
+		    case None:
     			requests.post(
     				f"https://{self.host}/{self.discon}",
-    				data="mode not set!".encode(encoding='utf-8'),
+    				data="Mode not set!".encode(encoding='utf-8'),
     				headers={
     					"Authorization": "Basic " + auth.decode('utf-8'),
     					"Title": "discon_ntfy with mode not set!",
@@ -203,6 +210,9 @@ class RTSPStream:
 		self.running = False
 		self.cap.release()
 		return None
+
+	def clear_memory(self):
+		gc.collect()
 
 class Config:
 	def __init__(self):
@@ -248,7 +258,7 @@ if __name__ == "__main__":
 
 	# Set environment for rtsp_transport
 	os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;udp"
-	os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_timeout;500000"
+	os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] += "|rtsp_timeout;500000"
 
 	# Make sure the path exist and is actually a pathname
 	if not os.path.exists(config.img_path):
@@ -276,18 +286,29 @@ if __name__ == "__main__":
 	frame = None
 	prev_frame = None
 	frame_diff = None
+
+	# Counter for manual Garbage Collection
+	loop_counter = 0
+
 	while True:
 		try:
+			# Manual GC to prevent memory creep in long running scripts
+			loop_counter += 1
+			if loop_counter % 100 == 0:
+				gc.collect()
+
 			if frame is not None:
 				prev_frame = frame
-				fram_diff = np.empty(frame.shape)
 
 			frame = stream.get_frame()
-			filename=f"{config.img_path}/{datetime.datetime.now().strftime('%c')}.jpg"
+
+			if frame is not None and prev_frame is not None:
+				frame = cv2.fastNlMeansDenoisingColored(frame)
+
 			info_KB, fram_diff = _extract_info_diff(prev_frame=prev_frame, frame=frame)
 
 			if frame is not None and info_KB > det_thres:
-				print(f"\ninfo differences in approx. KB: {info_KB:.2f}KB")
+				print(f"\rinfo differences in approx. KB: {info_KB:.2f}KB")
 
 				if fram_diff is not None and config.show:
 					cv2.imshow(winname="diff", mat=fram_diff)
@@ -298,7 +319,6 @@ if __name__ == "__main__":
 
 				while model_activation > 0 and msg_activation >= 0:
 					frame = stream.get_frame()
-					filename=f"{config.img_path}/{datetime.datetime.now().strftime('%c')}.jpg"
 
 					msg_dict = _extract_model_prediction(model, frame, device)
 
@@ -310,6 +330,9 @@ if __name__ == "__main__":
 						model_activation -= (model_act_step/5)
 
 					if msg_activation >= msg_act_thres:
+						timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+						filename = f"{config.img_path}/{timestamp}.jpg"
+
 						cv2.imwrite(filename, frame)
 						_push_cat_ntfy(
 							host = config.host,
@@ -321,13 +344,18 @@ if __name__ == "__main__":
 						)
 
 						print("Press ANY key to keep detecting and send message!")
-						cv2.waitKey(config.suspend*1000)
+						cv2.waitKey(1)
+						time.sleep(config.suspend)
+						prev_frame = None
 						break
 				if msg_activation != msg_n_init_act:
 					msg_activation = msg_n_init_act
+			else:
+				time.sleep(0.01)
 		except KeyboardInterrupt:
 			break
-		if cv2.waitKey(50) == ord('q'):
+
+		if config.show and cv2.waitKey(1) == ord('q'):
 			break
 	cv2.destroyAllWindows()
 	cv2.waitKey(1)
