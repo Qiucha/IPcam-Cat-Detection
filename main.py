@@ -212,7 +212,7 @@ class Config:
 		self.password = os.getenv('PASSWORD')
 		self.url = os.getenv('URL')
 		if (self.user != '') and (self.password != ''):
-			self.url = f"{url_li[0]}//{self.user}:{self.password}@{self.url.split('//')[1]}"
+			self.url = f"{self.url.split('//')[0]}//{self.user}:{self.password}@{self.url.split('//')[1]}"
 
 		# ntfy related information
 		self.ntfy_user=os.getenv('NTFY_USER')
