@@ -30,8 +30,10 @@ def _get_img_from_ipcam_stream(
 	img = cv2.imdecode(img_arr, cv2.IMREAD_COLOR)
 	return img
 
-def _extract_model_prediction(model, img, device) -> dict:
-	result = model(img, device=device)[0]
+def _extract_model_prediction(model, img, device, verbose:bool = False) -> dict:
+	with torch.no_grad():
+		result = model(img, device=device, stream=True, verbose=verbose)
+		result = next(iter(result))
 	max_conf = 0
 
 	for conf, cs in zip(result.boxes.conf, result.boxes.cls):
@@ -40,6 +42,8 @@ def _extract_model_prediction(model, img, device) -> dict:
 
 	msg_dict = None
 	if max_conf >= 0.7:
+		if verbose:
+			print("Cat detected!")
 		msg_dict = {
 			"pr": "default",
 			"title": "Cat Detected!",
@@ -47,6 +51,8 @@ def _extract_model_prediction(model, img, device) -> dict:
 			"tags": "tada"
 		}
 	elif max_conf >= 0.35:
+		if verbose:
+			print("Cat detected...? Probably...?")
 		msg_dict = {
 			"pr": "low",
 			"title": "Cat Detected! Probably...",
@@ -249,6 +255,7 @@ class Config:
 
 		# show difference between frame
 		self.show = False
+		self.verbose = False
 
 if __name__ == "__main__":
 	config = Config()
@@ -296,6 +303,12 @@ if __name__ == "__main__":
 			loop_counter += 1
 			if loop_counter % 100 == 0:
 				gc.collect()
+				# Clear CUDA cache if using NVIDIA GPU
+				if torch.cuda.is_available():
+					torch.cuda.empty_cache()
+				# Clear MPS cache if using Apple Silicon (Mac Mini M4/Air M1)
+				elif torch.backends.mps.is_available():
+					torch.mps.empty_cache()
 
 			if frame is not None:
 				prev_frame = frame
@@ -308,7 +321,8 @@ if __name__ == "__main__":
 			info_KB, fram_diff = _extract_info_diff(prev_frame=prev_frame, frame=frame)
 
 			if frame is not None and info_KB > det_thres:
-				print(f"\rinfo differences in approx. KB: {info_KB:.2f}KB")
+				if config.verbose:
+					print(f"\rinfo differences in approx. KB: {info_KB:.2f}KB")
 
 				if fram_diff is not None and config.show:
 					cv2.imshow(winname="diff", mat=fram_diff)
