@@ -32,13 +32,26 @@ def _get_img_from_ipcam_stream(
 
 def _extract_model_prediction(model, img, device, verbose:bool = False) -> dict:
 	with torch.no_grad():
-		result = model(img, device=device, stream=True, verbose=verbose)
-		result = next(iter(result))
+		result = model(img, device=device, stream=False, verbose=verbose)[0]
 	max_conf = 0
 
+	if result.boxes:
+		for box in result.boxes:
+			cls_id = int(box.cls.item())
+			conf = float(box.conf.item())
+			label = result.names[cls_id]
+
+			if conf >= 0.35 and label == 'cat' and (conf >= max_conf):
+				max_conf = conf
+
 	for conf, cs in zip(result.boxes.conf, result.boxes.cls):
-		if conf >= 0.35 and result.names[int(cs)] == 'cat' and (conf >= max_conf):
+		conf = float(conf.item())
+		cs = int(cs.item())
+		if conf >= 0.35 and result.names[cs] == 'cat' and (conf >= max_conf):
 			max_conf = conf
+
+	del result
+	del results
 
 	msg_dict = None
 	if max_conf >= 0.7:
@@ -144,7 +157,10 @@ class RTSPStream:
 				if self.neuron >= self.act_thres:
 					self._push_discon_ntfy(mode="disconnect")
 					self.neuron = self.neuron_neutral
-					time.sleep(3600) # wait for 1 hour
+					try:
+						time.sleep(3600) # wait for 1 hour
+					except KeyboardInterrupt:
+						print("KeyboardInterrupt")
 
 			ret, frame = self.cap.read()
 			if ret:
@@ -162,11 +178,18 @@ class RTSPStream:
 				elif self.neuron >= self.act_thres and tried:
 					self._push_discon_ntfy(mode="timeout")
 					self.neuron = self.neuron_neutral
-					time.sleep(3600) # wait for 1 hour
+					try:
+						time.sleep(3600) # wait for 1 hour
+					except KeyboardInterrupt:
+						print("KeyboardInterrupt")
 				else:
 					self._push_discon_ntfy(mode=None)
 					print(f"something goes wrong.")
-					time.sleep(3600) # wait for 1 hour
+					print(f"Current neuron: {self.neuron}\nCurrent act_threshold: {self.act_thres}")
+					try:
+						time.sleep(600) # wait for 10 minutes
+					except KeyboardInterrupt:
+						print("KeyboardInterrupt")
 
 	def _push_discon_ntfy(self, mode:str = None) -> None:
 	    # Three mode accepted ["disconnect", "timeout", others(fallback)]
@@ -219,6 +242,13 @@ class RTSPStream:
 
 	def clear_memory(self):
 		gc.collect()
+		# Clear CUDA cache if using NVIDIA GPU
+		if torch.cuda.is_available():
+			torch.cuda.empty_cache()
+		# Clear MPS cache if using Apple Silicon (Mac Mini M4/Air M1)
+		elif torch.backends.mps.is_available():
+			torch.mps.empty_cache()
+
 
 class Config:
 	def __init__(self):
@@ -255,7 +285,8 @@ class Config:
 
 		# show difference between frame
 		self.show = False
-		self.verbose = False
+		self.verbose = os.getenv('VERBOSE')
+		self.verbose = True if self.verbose == "True" or self.verbose == "1" else False
 
 if __name__ == "__main__":
 	config = Config()
@@ -360,6 +391,7 @@ if __name__ == "__main__":
 						print("Press ANY key to keep detecting and send message!")
 						cv2.waitKey(1)
 						time.sleep(config.suspend)
+						stream.clear_memory()
 						prev_frame = None
 						break
 				if msg_activation != msg_n_init_act:
