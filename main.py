@@ -51,7 +51,6 @@ def _extract_model_prediction(model, img, device, verbose:bool = False) -> dict:
 			max_conf = conf
 
 	del result
-	del results
 
 	msg_dict = None
 	if max_conf >= 0.7:
