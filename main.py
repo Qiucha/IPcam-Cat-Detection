@@ -1,4 +1,3 @@
-import cv2
 import requests
 import numpy as np
 from requests.auth import HTTPBasicAuth
@@ -13,6 +12,9 @@ from dotenv import load_dotenv
 import os
 import time
 import gc
+
+os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;udp|rtsp_timeout;500000"
+import cv2
 
 # This is only for Android IP webcam, which I'm not actively using.
 def _get_img_from_ipcam_stream(
@@ -294,8 +296,8 @@ if __name__ == "__main__":
 	model = YOLO(config.model_name)
 
 	# Set environment for rtsp_transport
-	os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;udp"
-	os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] += "|rtsp_timeout;500000"
+	# os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;udp"
+	# os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] += "|rtsp_timeout;500000"
 
 	# Make sure the path exist and is actually a pathname
 	if not os.path.exists(config.img_path):
@@ -398,7 +400,11 @@ if __name__ == "__main__":
 			else:
 				time.sleep(0.01)
 		except KeyboardInterrupt:
-			break
+		    pass
+		finally:
+            # Ensure resources are released to prevent the "Zombie" state next time
+            stream.stop()
+            cv2.destroyAllWindows()
 
 		if config.show and cv2.waitKey(1) == ord('q'):
 			break
