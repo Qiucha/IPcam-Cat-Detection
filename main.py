@@ -12,7 +12,7 @@ import time
 import gc
 
 # Optimize OpenCV for RTSP
-# Increased timeout to 5000000 (5s) for stability
+# Increased timeout to 5000000 (5s) to allow recovery time
 os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;udp|rtsp_timeout;5000000"
 import cv2
 
@@ -146,6 +146,7 @@ class RTSPStream:
 
         # State tracking
         self.connected = False
+        self.first_run = True  # Prevents "Reconnected" msg on startup
         self.reconnect_delay = 5  # seconds
 
         # Ntfy params
@@ -158,39 +159,56 @@ class RTSPStream:
 
     def update(self) -> None:
         while self.running:
-            # 1. Connect if not initialized
-            if self.cap is None:
-                self.cap = cv2.VideoCapture(self.rtsp_url, cv2.CAP_FFMPEG)
-                if not self.cap.isOpened():
-                    print(f"Failed to open stream. Retrying in {self.reconnect_delay}s...")
-                    self.cap = None
-                    time.sleep(self.reconnect_delay)
-                    continue
+            try:
+                # 1. Connect if not initialized
+                if self.cap is None:
+                    self.cap = cv2.VideoCapture(self.rtsp_url, cv2.CAP_FFMPEG)
+                    if not self.cap.isOpened():
+                        print(f"Failed to open stream. Retrying in {self.reconnect_delay}s...")
+                        self.cap.release()
+                        self.cap = None
+                        time.sleep(self.reconnect_delay)
+                        continue
+                    else:
+                        print("Stream Connected.")
+                        # Handle Reconnection Notification
+                        if not self.connected:
+                            if not self.first_run:
+                                self._push_discon_ntfy(mode="reconnect")
+                            else:
+                                self.first_run = False
+                            self.connected = True
+
+                # 2. Read Frame (Protected Block)
+                ret, frame = self.cap.read()
+
+                if ret:
+                    with self.lock:
+                        self.frame = frame
+                    # Redundant check for safety: Reset connection state if we just recovered
+                    if not self.connected:
+                        if not self.first_run:
+                            self._push_discon_ntfy(mode="reconnect")
+                        else:
+                            self.first_run = False
+                        self.connected = True
                 else:
-                    print("Stream Connected.")
-                    self.connected = True
-                    # Optional: Notify reconnection
-                    # self._push_discon_ntfy(mode="connected")
+                    # 3. Handle Clean Disconnection
+                    raise ValueError("Frame read returned False")
 
-            # 2. Read Frame
-            ret, frame = self.cap.read()
+            except Exception as e:
+                # 4. Handle Crash/Disconnection
+                print(f"Stream error: {e}. Reconnecting...")
 
-            if ret:
-                with self.lock:
-                    self.frame = frame
-                # Reset connection state if we just recovered
-                if not self.connected:
-                    self.connected = True
-            else:
-                # 3. Handle Disconnection
-                print("Frame read failed. Reconnecting...")
                 if self.connected:
                     self._push_discon_ntfy(mode="disconnect")
                     self.connected = False
 
-                self.cap.release()
+                if self.cap:
+                    self.cap.release()
+
                 self.cap = None
-                time.sleep(1) # Short cooldown before retry loop
+                time.sleep(self.reconnect_delay) # Wait before reconnecting
 
     def _push_discon_ntfy(self, mode:str = None) -> None:
         if not self.host or not self.discon:
@@ -198,8 +216,23 @@ class RTSPStream:
 
         try:
             auth = base64.b64encode((self.ntfy_user+":"+self.ntfy_pass).encode('UTF-8'))
-            title = "IPCam Disconnected!"
-            msg = "Check IPCam connection! Stream read failed."
+
+            # Default values
+            title = "IPCam Issue"
+            msg = "Unknown status."
+            priority = "default"
+            tags = "warning"
+
+            if mode == "disconnect":
+                title = "IPCam Disconnected!"
+                msg = "Check IPCam connection! Stream read failed."
+                priority = "high"
+                tags = "warning,rotating_light"
+            elif mode == "reconnect":
+                title = "IPCam Reconnected!"
+                msg = "Stream connection successfully restored."
+                priority = "default"
+                tags = "white_check_mark"
 
             requests.post(
                 f"https://{self.host}/{self.discon}",
@@ -207,13 +240,13 @@ class RTSPStream:
                 headers={
                     "Authorization": "Basic " + auth.decode('utf-8'),
                     "Title": title,
-                    "Priority": "high",
-                    "Tags": "warning"
+                    "Priority": priority,
+                    "Tags": tags
                 },
                 timeout=10
             )
         except Exception as e:
-            print(f"Failed to send disconnect notification: {e}")
+            print(f"Failed to send status notification: {e}")
 
     def get_frame(self) -> np.ndarray or None:
         with self.lock:
@@ -326,6 +359,7 @@ if __name__ == "__main__":
 
                     if fram_diff is not None and config.show:
                         cv2.imshow(winname="diff", mat=fram_diff)
+                        # Required to render window on MacOS
                         cv2.waitKey(1)
 
                     model_activation = 100
@@ -395,4 +429,6 @@ if __name__ == "__main__":
             break
 
     cv2.destroyAllWindows()
+    # REQUIRED for macOS: Pump event loop one last time to close windows
+    cv2.waitKey(1)
     stream.stop()
