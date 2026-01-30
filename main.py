@@ -400,10 +400,8 @@ if __name__ == "__main__":
             else:
                 time.sleep(0.01)
         except KeyboardInterrupt:
-            pass
-        finally:
             stream.stop()
-            cv2.destroyAllWindows()
+            break
 
         if config.show and cv2.waitKey(1) == ord('q'):
             break
